@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة تحكم الأدمن | 1X WINNER Admin Panel</title>
+  <!-- Google Fonts: Tajawal -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDKs (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Tajawal', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#fffbeb',
+              100: '#fef3c7',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      user-select: none;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #111827;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #4b5563;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col custom-scrollbar">
+
+  <!-- TOP ADMIN BAR -->
+  <header class="w-full bg-[#0d1322] border-b border-slate-800/80 sticky top-0 z-50 px-4 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-amber-500/20">
+        🛡️
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base sm:text-lg font-black text-white">لوحة تحكم الأدمن المستقلة (HTML)</h1>
+          <span id="firebase-status-badge" class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/40 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            فايربيس متصل بالمنصة
+          </span>
+        </div>
+        <p class="text-xs text-slate-400">إدارة الإيداعات، شحن الرصيد بالـ ID، رسائل الدعم الفني، وتعديل أرقام الكاش</p>
+      </div>
+    </div>
+
+    <!-- Quick Action Buttons -->
+    <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+      <button onclick="syncAllData()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-slate-700">
+        🔄 <span>تحديث البيانات</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="w-full max-w-7xl mx-auto px-4 sm:px-8 py-6 flex-1 flex flex-col gap-6">
+
+    <!-- METRICS CARDS -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <!-- Total System Balance -->
+      <div class="bg-[#131b2e] p-4 rounded-2xl border border-slate-800 shadow-md">
+        <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+          <span>إجمالي أرصدة اللاعبين</span>
+          <span class="text-base">💰</span>
+        </div>
+        <div class="mt-2 text-2xl sm:text-3xl font-black text-emerald-400 font-mono" id="stat-total-balance">
+          0.00 ج.م
+        </div>
+        <div class="text-[11px] text-slate-400 mt-1">مجموع أرصدة جميع الحسابات</div>
+      </div>
+
+      <!-- Pending Deposits -->
+      <div class="bg-[#131b2e] p-4 rounded-2xl border border-amber-500/40 shadow-md cursor-pointer hover:border-amber-400 transition" onclick="switchTab('deposits')">
+        <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+          <span>طلبات الإيداع المعلقة</span>
+          <span class="text-base">📥</span>
+        </div>
+        <div class="mt-2 text-2xl sm:text-3xl font-black text-amber-400 font-mono" id="stat-pending-deposits">
+          0
+        </div>
+        <div class="text-[11px] text-amber-300 font-medium mt-1">تحتاج موافقة الآن</div>
+      </div>
+
+      <!-- Support Tickets -->
+      <div class="bg-[#131b2e] p-4 rounded-2xl border border-blue-500/40 shadow-md cursor-pointer hover:border-blue-400 transition" onclick="switchTab('support')">
+        <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+          <span>رسائل وتذاكر الدعم</span>
+          <span class="text-base">💬</span>
+        </div>
+        <div class="mt-2 text-2xl sm:text-3xl font-black text-blue-400 font-mono" id="stat-pending-support">
+          0
+        </div>
+        <div class="text-[11px] text-blue-300 font-medium mt-1">رسائل واردة من اللاعبين</div>
+      </div>
+
+      <!-- Total Completed Deposits -->
+      <div class="bg-[#131b2e] p-4 rounded-2xl border border-slate-800 shadow-md">
+        <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+          <span>إجمالي الإيداعات الناجحة</span>
+          <span class="text-base">✅</span>
+        </div>
+        <div class="mt-2 text-2xl sm:text-3xl font-black text-purple-400 font-mono" id="stat-approved-deposits">
+          0.00 ج.م
+        </div>
+        <div class="text-[11px] text-slate-400 mt-1">المبالغ المشحونة فعلياً</div>
+      </div>
+    </div>
+
+    <!-- NAVIGATION TABS -->
+    <div class="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto custom-scrollbar">
+      <button onclick="switchTab('deposits')" id="tab-btn-deposits" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-amber-500 text-slate-950 shadow-md">
+        📥 <span>طلبات الإيداع</span>
+        <span id="badge-pending-deposits" class="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-slate-950 text-amber-300">0</span>
+      </button>
+
+      <button onclick="switchTab('support')" id="tab-btn-support" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-slate-800/80 text-slate-300 hover:bg-slate-800">
+        💬 <span>تذاكر الدعم والشكاوى</span>
+        <span id="badge-pending-support" class="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-blue-600 text-white">0</span>
+      </button>
+
+      <button onclick="switchTab('topup')" id="tab-btn-topup" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-slate-800/80 text-slate-300 hover:bg-slate-800">
+        ⚡ <span>شحن رصيد بالـ ID</span>
+      </button>
+
+      <button onclick="switchTab('numbers')" id="tab-btn-numbers" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-slate-800/80 text-slate-300 hover:bg-slate-800">
+        💳 <span>أرقام الكاش والتحويل</span>
+      </button>
+
+      <button onclick="switchTab('users')" id="tab-btn-users" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-slate-800/80 text-slate-300 hover:bg-slate-800">
+        👥 <span>قائمة اللاعبين</span>
+      </button>
+
+      <button onclick="switchTab('withdraws')" id="tab-btn-withdraws" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-slate-800/80 text-slate-300 hover:bg-slate-800">
+        📤 <span>طلبات السحب</span>
+        <span id="badge-pending-withdraws" class="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-purple-900 text-purple-200">0</span>
+      </button>
+
+      <button onclick="switchTab('transactions')" id="tab-btn-transactions" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-slate-800/80 text-slate-300 hover:bg-slate-800">
+        📜 <span>سجل المعاملات</span>
+      </button>
+
+      <button onclick="switchTab('crash')" id="tab-btn-crash" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-slate-800/80 text-slate-300 hover:bg-slate-800">
+        ✈️ <span>التحكم بلعبة الطيارة</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: DEPOSITS -->
+    <section id="tab-content-deposits" class="tab-content flex flex-col gap-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+          📥 <span>طلبات شحن الرصيد المعلقة والواردة من اللاعبين</span>
+        </h2>
+        <span class="text-xs text-slate-400">عند الموافقة على الطلب يتم إضافة الرصيد لحساب اللاعب فوراً عبر فايربيس</span>
+      </div>
+
+      <div class="bg-[#131b2e] rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-[#0f1626] text-slate-400 font-bold border-b border-slate-800">
+              <tr>
+                <th class="p-3.5">كود الطلب</th>
+                <th class="p-3.5">اللاعب (المعرف / الاسم)</th>
+                <th class="p-3.5">طريقة الدفع</th>
+                <th class="p-3.5">رقم المحول منه</th>
+                <th class="p-3.5">إيصال / سكرين شوت</th>
+                <th class="p-3.5">كود العملية / المرجع</th>
+                <th class="p-3.5">المبلغ المطلوب</th>
+                <th class="p-3.5">الوقت</th>
+                <th class="p-3.5 text-center">الإجراء</th>
+              </tr>
+            </thead>
+            <tbody id="deposits-table-body" class="divide-y divide-slate-800/60 font-medium">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: SUPPORT TICKETS & CHAT -->
+    <section id="tab-content-support" class="tab-content hidden flex flex-col gap-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+          💬 <span>تذاكر الدعم الفني واستفسارات اللاعبين المباشرة</span>
+        </h2>
+        <span class="text-xs text-slate-400">يمكنك الرد المباشر على أي رسالة لتصل للاعب في الوقت الفعلي</span>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Tickets List -->
+        <div class="lg:col-span-1 bg-[#131b2e] rounded-2xl border border-slate-800 p-3 flex flex-col gap-2 max-h-[600px] overflow-y-auto custom-scrollbar" id="support-tickets-list">
+          <!-- Rendered via JS -->
+        </div>
+
+        <!-- Active Chat Window -->
+        <div class="lg:col-span-2 bg-[#131b2e] rounded-2xl border border-slate-800 p-4 flex flex-col justify-between min-h-[500px] max-h-[600px]" id="support-chat-container">
+          <div class="flex flex-col items-center justify-center h-full text-slate-500 py-16 text-center">
+            <span class="text-3xl mb-2">💬</span>
+            <span class="text-sm font-bold text-slate-300">اختر تذكرة دعم من القائمة لعرض المحادثة والرد عليها</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: TOP-UP BY ID -->
+    <section id="tab-content-topup" class="tab-content hidden flex flex-col gap-4">
+      <div class="max-w-2xl mx-auto w-full bg-[#131b2e] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col gap-5">
+        <div>
+          <h2 class="text-lg font-black text-white flex items-center gap-2">
+            ⚡ <span>شحن رصيد مباشر لأي حساب (بالمعرف ID)</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">يمكنك إضافة أو خصم رصيد لأي مستخدم مسجل عبر الـ ID أو رقم الهاتف مباشرة</p>
+        </div>
+
+        <form id="direct-topup-form" onsubmit="handleDirectTopup(event)" class="flex flex-col gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">معرف اللاعب (User ID) أو رقم الهاتف</label>
+            <input 
+              type="text" 
+              id="topup-user-id" 
+              placeholder="أدخل ID اللاعب (مثال: 84920) أو رقم الهاتف" 
+              required
+              class="w-full bg-[#0b101d] border border-slate-700 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-amber-500"
+            >
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">المبلغ المراد شحنه (جنيه مصري)</label>
+            <div class="flex items-center gap-2">
+              <input 
+                type="number" 
+                id="topup-amount" 
+                placeholder="مثال: 100" 
+                min="1"
+                step="any"
+                required
+                class="w-full bg-[#0b101d] border border-slate-700 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-amber-500"
+              >
+            </div>
+            <div class="flex items-center gap-2 mt-2">
+              <button type="button" onclick="setTopupAmount(50)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">+50</button>
+              <button type="button" onclick="setTopupAmount(100)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">+100</button>
+              <button type="button" onclick="setTopupAmount(200)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">+200</button>
+              <button type="button" onclick="setTopupAmount(500)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">+500</button>
+              <button type="button" onclick="setTopupAmount(1000)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">+1000</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">ملاحظة أو سبب الشحن (اختياري)</label>
+            <input 
+              type="text" 
+              id="topup-note" 
+              placeholder="مثال: مكافأة تسجيل / شحن كاش خارجي" 
+              class="w-full bg-[#0b101d] border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+            >
+          </div>
+
+          <button 
+            type="submit" 
+            class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-sm transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 mt-2"
+          >
+            ⚡ <span>تأكيد شحن الرصيد للاعب الآن</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 4: CASH NUMBERS & SETTINGS -->
+    <section id="tab-content-numbers" class="tab-content hidden flex flex-col gap-4">
+      <div class="max-w-2xl mx-auto w-full bg-[#131b2e] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col gap-5">
+        <div>
+          <h2 class="text-lg font-black text-white flex items-center gap-2">
+            💳 <span>تعديل أرقام محافظ الكاش للتحويل</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">هذه الأرقام تظهر مباشرة للاعبين في صفحة الإيداع بالمنصة</p>
+        </div>
+
+        <form id="cash-numbers-form" onsubmit="handleSaveNumbers(event)" class="flex flex-col gap-4">
+          <div>
+            <label class="block text-xs font-bold text-rose-400 mb-1.5 flex items-center gap-1.5">
+              <span>🔴 رقم محفظة فودافون كاش (Vodafone Cash):</span>
+            </label>
+            <input 
+              type="text" 
+              id="num-vodafone" 
+              oninput="autoSaveNumbersLive()"
+              placeholder="010xxxxxxxx" 
+              class="w-full bg-[#0b101d] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-rose-500"
+            >
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-emerald-400 mb-1.5 flex items-center gap-1.5">
+              <span>🟢 رقم محفظة اتصالات كاش (Etisalat Cash):</span>
+            </label>
+            <input 
+              type="text" 
+              id="num-etisalat" 
+              oninput="autoSaveNumbersLive()"
+              placeholder="011xxxxxxxx" 
+              class="w-full bg-[#0b101d] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-emerald-500"
+            >
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-orange-400 mb-1.5 flex items-center gap-1.5">
+              <span>🟠 رقم محفظة أورانج كاش (Orange Cash):</span>
+            </label>
+            <input 
+              type="text" 
+              id="num-orange" 
+              oninput="autoSaveNumbersLive()"
+              placeholder="012xxxxxxxx" 
+              class="w-full bg-[#0b101d] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-orange-500"
+            >
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-purple-400 mb-1.5 flex items-center gap-1.5">
+              <span>🟣 عنوان أو رقم إنستاباي (InstaPay):</span>
+            </label>
+            <input 
+              type="text" 
+              id="num-instapay" 
+              oninput="autoSaveNumbersLive()"
+              placeholder="user@instapay or phone" 
+              class="w-full bg-[#0b101d] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-purple-500"
+            >
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1.5">الحد الأدنى للإيداع (ج.م)</label>
+              <input 
+                type="number" 
+                id="num-min-deposit" 
+                oninput="autoSaveNumbersLive()"
+                value="10" 
+                class="w-full bg-[#0b101d] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono"
+              >
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1.5">الحد الأدنى للسحب (ج.م)</label>
+              <input 
+                type="number" 
+                id="num-min-withdraw" 
+                oninput="autoSaveNumbersLive()"
+                value="50" 
+                class="w-full bg-[#0b101d] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono"
+              >
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition cursor-pointer shadow-md mt-2"
+          >
+            💾 حفظ وتحديث الأرقام في المنصة وسيرفر فايربيس
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 5: USERS -->
+    <section id="tab-content-users" class="tab-content hidden flex flex-col gap-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+          👥 <span>قائمة جميع اللاعبين المسجلين في المنصة</span>
+        </h2>
+        <input 
+          type="text" 
+          id="user-search-input" 
+          oninput="renderUsersTable()" 
+          placeholder="🔍 بحث بالاسم أو الـ ID أو رقم الهاتف..." 
+          class="bg-[#131b2e] border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 w-64"
+        >
+      </div>
+
+      <div class="bg-[#131b2e] rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-[#0f1626] text-slate-400 font-bold border-b border-slate-800">
+              <tr>
+                <th class="p-3.5">معرف اللاعب (ID)</th>
+                <th class="p-3.5">اسم اللاعب</th>
+                <th class="p-3.5">رقم الهاتف</th>
+                <th class="p-3.5">الرصيد الحالي</th>
+                <th class="p-3.5">الدور</th>
+                <th class="p-3.5 text-center">إجراء سريع</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body" class="divide-y divide-slate-800/60 font-medium">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: WITHDRAWALS -->
+    <section id="tab-content-withdraws" class="tab-content hidden flex flex-col gap-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+          📤 <span>طلبات سحب الأرباح الواردة من اللاعبين</span>
+        </h2>
+        <span class="text-xs text-slate-400">قم بتحويل المبلغ لرقم المحفظة ثم اضغط تأكيد التحويل</span>
+      </div>
+
+      <div class="bg-[#131b2e] rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-[#0f1626] text-slate-400 font-bold border-b border-slate-800">
+              <tr>
+                <th class="p-3.5">كود السحب</th>
+                <th class="p-3.5">اللاعب</th>
+                <th class="p-3.5">رقم المحفظة المستلمة</th>
+                <th class="p-3.5">المبلغ المطلوب</th>
+                <th class="p-3.5">الوقت</th>
+                <th class="p-3.5 text-center">الإجراء</th>
+              </tr>
+            </thead>
+            <tbody id="withdraws-table-body" class="divide-y divide-slate-800/60 font-medium">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 7: TRANSACTIONS -->
+    <section id="tab-content-transactions" class="tab-content hidden flex flex-col gap-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+          📜 <span>سجل المعاملات والإيداعات والسحوبات الشامل</span>
+        </h2>
+      </div>
+
+      <div class="bg-[#131b2e] rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-[#0f1626] text-slate-400 font-bold border-b border-slate-800">
+              <tr>
+                <th class="p-3.5">المعرف</th>
+                <th class="p-3.5">اللاعب</th>
+                <th class="p-3.5">نوع العملية</th>
+                <th class="p-3.5">المبلغ</th>
+                <th class="p-3.5">الحالة</th>
+                <th class="p-3.5">الوقت والتاريخ</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-table-body" class="divide-y divide-slate-800/60 font-medium">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 8: CRASH CONTROLS -->
+    <section id="tab-content-crash" class="tab-content hidden flex flex-col gap-4">
+      <div class="max-w-2xl mx-auto w-full bg-[#131b2e] p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col gap-5">
+        <div>
+          <h2 class="text-lg font-black text-white flex items-center gap-2">
+            ✈️ <span>محرك لعبة الطيارة الداخلي المستقل (Fair Internal Engine)</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">يعمل محرك الطيارة الآن بنظام احتمالات داخلي مستقل وعشوائي 100% دون أي توقعات خارجية</p>
+        </div>
+
+        <div class="bg-[#0b101d] p-4 rounded-xl border border-slate-800 flex flex-col gap-3">
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+            <div>
+              <div class="text-xs font-bold text-white">حالة المحرك: محاكاة رياضية داخلية معتمدة 100%</div>
+              <div class="text-[11px] text-emerald-400 font-mono">Provably Fair Internal Engine Active</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-800">
+            <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400 text-[10px]">استقلالية الجولة:</span>
+              <div class="text-amber-300 font-bold font-mono">100% جديدة ومستقلة</div>
+            </div>
+            <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400 text-[10px]">توليد المضاعف:</span>
+              <div class="text-emerald-400 font-bold font-mono">ديناميكي داخلي</div>
+            </div>
+          </div>
+
+          <button 
+            type="button" 
+            onclick="purgeCrashOverrides()" 
+            class="mt-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer flex items-center justify-center gap-2"
+          >
+            ✅ تأكيد ومسح أي قيم سابقة معلقة
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FLOATING TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm"></div>
+
+  <!-- JAVASCRIPT LOGIC WITH FIREBASE SYNC -->
+  <script>
+    // Storage Keys
+    const KEYS = {
+      ADMIN_SETTINGS: 'app_admin_settings',
+      ALL_USERS: 'app_all_users',
+      USER: 'app_user',
+      TXS: 'app_txs',
+      SUPPORT: 'app_support_tickets',
+      FORCED_CRASH: 'app_forced_crash_multiplier'
+    };
+
+    // BroadcastChannel for instant cross-tab real-time sync
+    let broadcastCh = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        broadcastCh = new BroadcastChannel('1xwinner_sync');
+        broadcastCh.onmessage = (e) => {
+          const msg = e.data;
+          if (!msg || !msg.type) return;
+          console.log('[Admin Broadcast Received]:', msg.type, msg.data);
+          
+          if (msg.type === 'NEW_DEPOSIT') {
+            playDepositChime();
+            showToast(`🔔 طلب إيداع جديد بقيمة ${msg.data?.amount || ''} ج.م من ${msg.data?.userName || 'لاعب'}!`, 'success');
+            syncAllData(false);
+          } else if (msg.type === 'NEW_WITHDRAW') {
+            playDepositChime();
+            showToast(`📤 طلب سحب جديد بقيمة ${msg.data?.amount || ''} ج.م!`, 'info');
+            syncAllData(false);
+          } else if (msg.type === 'SUPPORT_UPDATED') {
+            syncAllData(false);
+          } else if (msg.type === 'SETTINGS_UPDATED') {
+            loadFormValues();
+          } else {
+            syncAllData(false);
+          }
+        };
+      }
+    } catch(e) {
+      console.warn('BroadcastChannel error in admin.html:', e);
+    }
+
+    function broadcastChange(type, data) {
+      try {
+        if (broadcastCh) {
+          broadcastCh.postMessage({ type, data, timestamp: Date.now() });
+        }
+      } catch(e) {}
+    }
+
+    // Firebase Config provided by user
+    const firebaseConfig = {
+      apiKey: "AIzaSyDcT4KhPWduKq4AzpGhyxxaD2MU4DjCSDQ",
+      authDomain: "c8ad7c49-cb5.firebaseapp.com",
+      databaseURL: "https://c8ad7c49-cb5-default-rtdb.firebaseio.com",
+      projectId: "c8ad7c49-cb5",
+      storageBucket: "c8ad7c49-cb5.firebasestorage.app",
+      messagingSenderId: "51872434462",
+      appId: "1:51872434462:web:998414723144a95dfe610f",
+      measurementId: "G-DNEWP38T17"
+    };
+
+    let fbApp = null;
+    let fbDb = null;
+    let selectedSupportTicketId = null;
+
+    try {
+      if (window.firebase) {
+        fbApp = firebase.initializeApp(firebaseConfig);
+        fbDb = firebase.database();
+        console.log("Firebase initialized in admin.html ✅");
+      }
+    } catch(err) {
+      console.warn("Firebase Init notice:", err);
+    }
+
+    // Default Fallbacks
+    const DEFAULT_SETTINGS = {
+      vodafoneNumber: '01098688815',
+      etisalatNumber: '01123456789',
+      orangeNumber: '01234567890',
+      instapayNumber: '01098688815',
+      minDeposit: 10,
+      minWithdraw: 50,
+      platformName: '1X WINNER',
+      autoApproveDeposits: false
+    };
+
+    function getStoredData() {
+      let adminSettings = DEFAULT_SETTINGS;
+      let allUsers = [];
+      let txs = [];
+      let supportTickets = [];
+
+      try {
+        const sSettings = localStorage.getItem(KEYS.ADMIN_SETTINGS);
+        if (sSettings) adminSettings = { ...DEFAULT_SETTINGS, ...JSON.parse(sSettings) };
+
+        const sUsers = localStorage.getItem(KEYS.ALL_USERS);
+        if (sUsers) allUsers = JSON.parse(sUsers);
+
+        const sTxs = localStorage.getItem(KEYS.TXS);
+        if (sTxs) txs = JSON.parse(sTxs);
+
+        const sSupport = localStorage.getItem(KEYS.SUPPORT);
+        if (sSupport) supportTickets = JSON.parse(sSupport);
+      } catch (err) {
+        console.error('Storage parse error:', err);
+      }
+
+      return { adminSettings, allUsers, txs, supportTickets };
+    }
+
+    // Toast Notification System
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `py-3 px-4 rounded-xl shadow-2xl text-xs font-bold text-white transition-all transform animate-bounce pointer-events-auto border ${
+        type === 'success' ? 'bg-emerald-600 border-emerald-400' :
+        type === 'error' ? 'bg-rose-600 border-rose-400' : 'bg-blue-600 border-blue-400'
+      }`;
+      toast.dir = 'rtl';
+      toast.innerText = msg;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3500);
+    }
+
+    // Switch Admin Tabs
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.className = 'tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-slate-800/80 text-slate-300 hover:bg-slate-800';
+      });
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (activeBtn) {
+        activeBtn.className = 'tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 whitespace-nowrap bg-amber-500 text-slate-950 shadow-md';
+      }
+
+      document.querySelectorAll('.tab-content').forEach(sec => sec.classList.add('hidden'));
+      const activeSec = document.getElementById(`tab-content-${tabId}`);
+      if (activeSec) activeSec.classList.remove('hidden');
+
+      if (tabId === 'support') {
+        renderSupportSection();
+      }
+    }
+
+    // Render Metrics
+    function renderStats() {
+      const { allUsers, txs, supportTickets } = getStoredData();
+
+      const totalBal = allUsers.reduce((sum, u) => sum + (Number(u.balance) || 0), 0);
+      document.getElementById('stat-total-balance').innerText = `${totalBal.toFixed(2)} ج.م`;
+
+      const pendingDeposits = txs.filter(t => t.type === 'deposit' && t.status === 'pending');
+      document.getElementById('stat-pending-deposits').innerText = pendingDeposits.length;
+      document.getElementById('badge-pending-deposits').innerText = pendingDeposits.length;
+
+      const openSupport = supportTickets.filter(t => t.status === 'open');
+      const badgeSupport = document.getElementById('badge-pending-support');
+      if (badgeSupport) badgeSupport.innerText = openSupport.length;
+      const statSupport = document.getElementById('stat-pending-support');
+      if (statSupport) statSupport.innerText = openSupport.length;
+
+      const approvedDeposits = txs.filter(t => t.type === 'deposit' && t.status === 'completed');
+      const totalApprovedSum = approvedDeposits.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      document.getElementById('stat-approved-deposits').innerText = `${totalApprovedSum.toFixed(2)} ج.م`;
+
+      document.getElementById('stat-total-users').innerText = allUsers.length;
+    }
+
+    // Render Deposits Table
+    function renderDepositsTable() {
+      const { txs } = getStoredData();
+      const pendingDeposits = txs.filter(t => t.type === 'deposit' && t.status === 'pending');
+      const tbody = document.getElementById('deposits-table-body');
+      if (!tbody) return;
+
+      if (pendingDeposits.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-slate-500">لا توجد طلبات إيداع معلقة حالياً</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pendingDeposits.map(t => `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="p-3.5 font-mono text-amber-400 font-bold">${t.id}</td>
+          <td class="p-3.5">
+            <div class="font-bold text-white">${t.userName || 'غير معروف'}</div>
+            <div class="text-[11px] text-slate-400 font-mono">ID: ${t.userId || '-'}</div>
+          </td>
+          <td class="p-3.5 font-bold text-slate-300">${t.method || 'فودافون كاش'}</td>
+          <td class="p-3.5 font-mono text-amber-300 font-bold">${t.senderPhone || t.phone || '-'}</td>
+          <td class="p-3.5">
+            ${t.receiptImage ? `
+              <button onclick="previewReceipt('${t.receiptImage}')" class="px-2.5 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white text-[11px] font-bold border border-blue-500/40 transition flex items-center gap-1">
+                📸 <span>عرض الإيصال</span>
+              </button>
+            ` : `<span class="text-slate-500 text-[11px]">بدون صورة</span>`}
+          </td>
+          <td class="p-3.5 font-mono text-slate-300 text-[11px]">${t.referenceCode || '-'}</td>
+          <td class="p-3.5 font-mono text-emerald-400 font-black text-sm">${Number(t.amount || 0).toFixed(2)} ج.م</td>
+          <td class="p-3.5 text-slate-400 text-[11px]">${new Date(t.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</td>
+          <td class="p-3.5 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <button onclick="approveDeposit('${t.id}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer shadow-sm">
+                ✅ موافقة وشحن
+              </button>
+              <button onclick="rejectDeposit('${t.id}')" class="px-3 py-1.5 rounded-lg bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs transition cursor-pointer shadow-sm">
+                ❌ رفض
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function previewReceipt(imgSrc) {
+      const modal = document.getElementById('receipt-image-modal');
+      const img = document.getElementById('receipt-modal-img');
+      img.src = imgSrc;
+      modal.classList.remove('hidden');
+    }
+
+    function closeReceiptModal() {
+      const modal = document.getElementById('receipt-image-modal');
+      modal.classList.add('hidden');
+    }
+
+    // Approve Deposit (Sync with Firebase Realtime Database)
+    function approveDeposit(txId) {
+      const { txs, allUsers } = getStoredData();
+      const txIndex = txs.findIndex(t => t.id === txId);
+      if (txIndex === -1) return;
+
+      const tx = txs[txIndex];
+      tx.status = 'completed';
+
+      // 1. Add amount to user's balance
+      const userIndex = allUsers.findIndex(u => u.id === tx.userId);
+      let updatedUser = null;
+      let finalBal = 0;
+      if (userIndex !== -1) {
+        allUsers[userIndex].balance = Number(((Number(allUsers[userIndex].balance) || 0) + Number(tx.amount)).toFixed(2));
+        allUsers[userIndex].totalDeposited = Number(((Number(allUsers[userIndex].totalDeposited) || 0) + Number(tx.amount)).toFixed(2));
+        updatedUser = allUsers[userIndex];
+        finalBal = updatedUser.balance;
+      }
+
+      // 2. Firebase Sync
+      if (fbDb) {
+        fbDb.ref(`transactions/${txId}`).update({ status: 'completed' });
+        if (updatedUser) {
+          fbDb.ref(`users/${updatedUser.id}`).update({
+            balance: updatedUser.balance,
+            totalDeposited: updatedUser.totalDeposited
+          });
+        }
+      }
+
+      // 3. Update localStorage for current active user if matches
+      try {
+        const currentActive = JSON.parse(localStorage.getItem(KEYS.USER) || '{}');
+        if (currentActive.id === tx.userId) {
+          currentActive.balance = Number(((Number(currentActive.balance) || 0) + Number(tx.amount)).toFixed(2));
+          currentActive.totalDeposited = Number(((Number(currentActive.totalDeposited) || 0) + Number(tx.amount)).toFixed(2));
+          finalBal = currentActive.balance;
+          localStorage.setItem(KEYS.USER, JSON.stringify(currentActive));
+        }
+      } catch {}
+
+      localStorage.setItem(KEYS.ALL_USERS, JSON.stringify(allUsers));
+      localStorage.setItem(KEYS.TXS, JSON.stringify(txs));
+
+      // Broadcast to all open tabs
+      broadcastChange('DEPOSIT_APPROVED', {
+        txId,
+        userId: tx.userId,
+        newBalance: finalBal,
+        amount: tx.amount
+      });
+
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+
+      showToast(`تمت الموافقة وشحن ${tx.amount} ج.م للمستخدم بنجاح ومزامنته فوراً ✅`, 'success');
+      renderAll();
+    }
+
+    // Reject Deposit
+    function rejectDeposit(txId) {
+      const { txs } = getStoredData();
+      const txIndex = txs.findIndex(t => t.id === txId);
+      if (txIndex === -1) return;
+
+      const tx = txs[txIndex];
+      tx.status = 'rejected';
+
+      if (fbDb) {
+        fbDb.ref(`transactions/${txId}`).update({ status: 'rejected' });
+      }
+
+      localStorage.setItem(KEYS.TXS, JSON.stringify(txs));
+
+      broadcastChange('DEPOSIT_REJECTED', {
+        txId,
+        userId: tx.userId
+      });
+
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+
+      showToast('تم رفض طلب الإيداع ومزامنة القرار ❌', 'error');
+      renderAll();
+    }
+
+    // Direct Top-up by User ID
+    function handleDirectTopup(e) {
+      e.preventDefault();
+      const targetId = document.getElementById('topup-user-id').value.trim();
+      const amount = Number(document.getElementById('topup-amount').value);
+      const note = document.getElementById('topup-note').value.trim();
+
+      if (!targetId || isNaN(amount) || amount === 0) {
+        showToast('يرجى إدخال معرف واسم ومبلغ صحيح', 'error');
+        return;
+      }
+
+      const { allUsers, txs } = getStoredData();
+      let userIndex = allUsers.findIndex(u => 
+        (u.id && u.id.trim() === targetId) || 
+        (u.phone && u.phone.trim() === targetId) || 
+        (u.username && u.username.trim().toLowerCase() === targetId.toLowerCase())
+      );
+
+      if (userIndex === -1) {
+        // Try to fetch from Firebase users directly
+        if (fbDb) {
+          fbDb.ref(`users/${targetId}`).once('value').then(snap => {
+            if (snap.exists()) {
+              const u = snap.val();
+              allUsers.push(u);
+              executeTopup(allUsers.length - 1);
+            } else {
+              showToast(`لم يتم العثور على لاعب بالـ ID أو رقم الهاتف: ${targetId}`, 'error');
+            }
+          });
+          return;
+        }
+        showToast(`لم يتم العثور على لاعب بالـ ID أو رقم الهاتف: ${targetId}`, 'error');
+        return;
+      }
+
+      executeTopup(userIndex);
+
+      function executeTopup(idx) {
+        const targetUser = allUsers[idx];
+        const newBal = Number(Math.max(0, (Number(targetUser.balance) || 0) + amount).toFixed(2));
+        allUsers[idx].balance = newBal;
+        if (amount > 0) {
+          allUsers[idx].totalDeposited = Number(((Number(targetUser.totalDeposited) || 0) + amount).toFixed(2));
+        }
+
+        // Add transaction record
+        const txId = `TOPUP-${Date.now().toString().slice(-6)}`;
+        const txObj = {
+          id: txId,
+          userId: targetUser.id,
+          userName: targetUser.username,
+          userPhone: targetUser.phone,
+          type: 'deposit',
+          amount: Math.abs(amount),
+          method: amount >= 0 ? 'شحن إدارة HTML فوري' : 'خصم رصيد من الإدارة',
+          senderPhone: 'لوحة الإدارة',
+          referenceCode: note || 'شحن رصيد مباشر من الأدمن',
+          status: 'completed',
+          timestamp: Date.now()
+        };
+        txs.unshift(txObj);
+
+        // Firebase Sync
+        if (fbDb) {
+          fbDb.ref(`users/${targetUser.id}`).update({
+            balance: newBal,
+            totalDeposited: allUsers[idx].totalDeposited || 0
+          });
+          fbDb.ref(`transactions/${txId}`).set(txObj);
+        }
+
+        try {
+          const currentActive = JSON.parse(localStorage.getItem(KEYS.USER) || '{}');
+          if (currentActive.id === targetUser.id) {
+            currentActive.balance = newBal;
+            localStorage.setItem(KEYS.USER, JSON.stringify(currentActive));
+          }
+        } catch {}
+
+        localStorage.setItem(KEYS.ALL_USERS, JSON.stringify(allUsers));
+        localStorage.setItem(KEYS.TXS, JSON.stringify(txs));
+
+        broadcastChange('DIRECT_TOPUP', {
+          userId: targetUser.id,
+          newBalance: newBal,
+          amount
+        });
+
+        try {
+          window.dispatchEvent(new Event('storage'));
+        } catch {}
+
+        showToast(`تم شحن ${amount} ج.م بنجاح للاعب: ${targetUser.username} (ID: ${targetUser.id})!`, 'success');
+        document.getElementById('topup-amount').value = '';
+        renderAll();
+      }
+    }
+
+    function setTopupAmount(val) {
+      document.getElementById('topup-amount').value = val;
+    }
+
+    // Auto-save debouncer for numbers
+    let autoSaveNumberTimer = null;
+    function autoSaveNumbersLive() {
+      clearTimeout(autoSaveNumberTimer);
+      autoSaveNumberTimer = setTimeout(() => {
+        saveNumbersNow(false);
+      }, 400);
+    }
+
+    function saveNumbersNow(showNotification = true) {
+      const { adminSettings } = getStoredData();
+      const vodafone = document.getElementById('num-vodafone')?.value.trim();
+      const etisalat = document.getElementById('num-etisalat')?.value.trim();
+      const orange = document.getElementById('num-orange')?.value.trim();
+      const instapay = document.getElementById('num-instapay')?.value.trim();
+      const minDep = Number(document.getElementById('num-min-deposit')?.value) || 10;
+      const minWith = Number(document.getElementById('num-min-withdraw')?.value) || 50;
+
+      if (vodafone !== undefined) adminSettings.vodafoneNumber = vodafone;
+      if (etisalat !== undefined) adminSettings.etisalatNumber = etisalat;
+      if (orange !== undefined) adminSettings.orangeNumber = orange;
+      if (instapay !== undefined) adminSettings.instapayNumber = instapay;
+      if (minDep !== undefined) adminSettings.minDeposit = minDep;
+      if (minWith !== undefined) adminSettings.minWithdraw = minWith;
+
+      if (fbDb) {
+        fbDb.ref('settings').set(adminSettings);
+      }
+
+      localStorage.setItem(KEYS.ADMIN_SETTINGS, JSON.stringify(adminSettings));
+      broadcastChange('SETTINGS_UPDATED', adminSettings);
+
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+
+      if (showNotification) {
+        showToast('تم حفظ وتحديث أرقام الكاش والإعدادات تلقائياً في السيرفر والموقع ⚡', 'success');
+      }
+    }
+
+    // Save Cash Numbers Form Submit
+    function handleSaveNumbers(e) {
+      if (e) e.preventDefault();
+      saveNumbersNow(true);
+    }
+
+    // SUPPORT TICKETS TAB RENDERING
+    function renderSupportSection() {
+      const { supportTickets } = getStoredData();
+      const listContainer = document.getElementById('support-tickets-list');
+      if (!listContainer) return;
+
+      if (supportTickets.length === 0) {
+        listContainer.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">لا توجد رسائل دعم فني حالياً</div>`;
+        return;
+      }
+
+      listContainer.innerHTML = supportTickets.map(t => {
+        const isSelected = selectedSupportTicketId === t.id;
+        const lastMsg = t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1] : null;
+        const unreadAdmin = t.status === 'open';
+
+        return `
+          <div 
+            onclick="selectSupportTicket('${t.id}')" 
+            class="p-3 rounded-xl border transition cursor-pointer flex flex-col gap-1.5 ${
+              isSelected ? 'bg-blue-900/40 border-blue-500' : 'bg-slate-900/60 hover:bg-slate-800/60 border-slate-800'
+            }"
+          >
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white text-xs">${t.subject || 'بدون عنوان'}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                t.status === 'open' ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
+              }">${t.status === 'open' ? 'قيد المتابعة' : 'مكتملة'}</span>
+            </div>
+            <div class="text-[11px] text-slate-400 flex items-center justify-between font-mono">
+              <span>👤 ${t.userName || 'لاعب'} (ID: ${t.userId || '-'})</span>
+              <span>${new Date(t.updatedAt || t.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            ${lastMsg ? `
+              <div class="text-[11px] text-slate-300 line-clamp-1 bg-black/20 p-1.5 rounded-lg mt-0.5">
+                <span class="text-slate-500 font-bold">${lastMsg.sender === 'admin' ? 'رد الأدمن: ' : 'اللاعب: '}</span>
+                ${lastMsg.text}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      renderActiveChat();
+    }
+
+    function selectSupportTicket(ticketId) {
+      selectedSupportTicketId = ticketId;
+      renderSupportSection();
+    }
+
+    function renderActiveChat() {
+      const { supportTickets } = getStoredData();
+      const chatContainer = document.getElementById('support-chat-container');
+      if (!chatContainer) return;
+
+      const ticket = supportTickets.find(t => t.id === selectedSupportTicketId);
+      if (!ticket) {
+        chatContainer.innerHTML = `
+          <div class="flex flex-col items-center justify-center h-full text-slate-500 py-16 text-center">
+            <span class="text-3xl mb-2">💬</span>
+            <span class="text-sm font-bold text-slate-300">اختر تذكرة دعم من القائمة لعرض المحادثة والرد عليها</span>
+          </div>
+        `;
+        return;
+      }
+
+      const msgs = Array.isArray(ticket.messages) ? ticket.messages : [];
+
+      chatContainer.innerHTML = `
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white text-sm">${ticket.subject}</span>
+              <span class="text-[10px] font-mono bg-slate-800 text-slate-400 px-2 py-0.5 rounded">ID: ${ticket.id}</span>
+            </div>
+            <div class="text-xs text-slate-400 mt-0.5">
+              اللاعب: <span class="text-amber-300 font-bold">${ticket.userName}</span> | المعرف: <span class="font-mono text-amber-300">${ticket.userId}</span> | الهاتف: <span class="font-mono text-slate-300">${ticket.userPhone || '-'}</span>
+            </div>
+          </div>
+          <button onclick="toggleTicketStatus('${ticket.id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+            ticket.status === 'open' ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+          }">
+            ${ticket.status === 'open' ? '✅ تم الحل وإغلاق' : '🔄 إعادة فتح التذكرة'}
+          </button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="flex-1 overflow-y-auto my-3 p-3 bg-[#0a0f1d] rounded-xl flex flex-col gap-2.5 max-h-[350px] custom-scrollbar" id="admin-chat-box">
+          ${msgs.length === 0 ? `<div class="text-center text-slate-500 text-xs py-8">لا توجد رسائل</div>` : msgs.map(m => `
+            <div class="flex flex-col max-w-[80%] ${m.sender === 'admin' ? 'self-start items-start' : 'self-end items-end'}">
+              <div class="flex items-center gap-1 text-[10px] text-slate-400 mb-0.5">
+                <span class="font-bold ${m.sender === 'admin' ? 'text-amber-300' : 'text-blue-300'}">
+                  ${m.sender === 'admin' ? 'الإدارة (أنت)' : ticket.userName}
+                </span>
+                <span class="font-mono">${new Date(m.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div class="p-2.5 rounded-xl text-xs leading-relaxed ${
+                m.sender === 'admin' ? 'bg-amber-600/30 text-amber-100 border border-amber-500/30 rounded-tr-none' : 'bg-blue-600/30 text-blue-100 border border-blue-500/30 rounded-tl-none'
+              }">
+                ${m.text}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Reply Input -->
+        <form onsubmit="sendAdminSupportReply(event, '${ticket.id}')" class="flex gap-2 pt-2 border-t border-slate-800">
+          <input 
+            type="text" 
+            id="admin-reply-input" 
+            placeholder="اكتب رد الدعم الفني للاعب هنا..." 
+            required 
+            class="flex-1 bg-[#0b101d] border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+          >
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer shadow-md">
+            إرسال الرد 💬
+          </button>
+        </form>
+      `;
+
+      // Auto scroll chat to bottom
+      const chatBox = document.getElementById('admin-chat-box');
+      if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sendAdminSupportReply(e, ticketId) {
+      e.preventDefault();
+      const input = document.getElementById('admin-reply-input');
+      const text = input ? input.value.trim() : '';
+      if (!text) return;
+
+      const { supportTickets } = getStoredData();
+      const ticketIndex = supportTickets.findIndex(t => t.id === ticketId);
+      if (ticketIndex === -1) return;
+
+      const newMsg = {
+        id: `MSG-${Date.now()}`,
+        sender: 'admin',
+        senderName: 'الدعم الفني',
+        text: text,
+        timestamp: Date.now()
+      };
+
+      supportTickets[ticketIndex].messages = [...(supportTickets[ticketIndex].messages || []), newMsg];
+      supportTickets[ticketIndex].updatedAt = Date.now();
+
+      // Firebase Sync
+      if (fbDb) {
+        fbDb.ref(`support_tickets/${ticketId}`).set(supportTickets[ticketIndex]);
+      }
+
+      localStorage.setItem(KEYS.SUPPORT, JSON.stringify(supportTickets));
+      broadcastChange('SUPPORT_UPDATED', supportTickets[ticketIndex]);
+
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+
+      input.value = '';
+      showToast('تم إرسال الرد للاعب بنجاح ومزامنته في الوقت الفعلي ✅', 'success');
+      renderSupportSection();
+    }
+
+    function toggleTicketStatus(ticketId) {
+      const { supportTickets } = getStoredData();
+      const ticket = supportTickets.find(t => t.id === ticketId);
+      if (!ticket) return;
+
+      ticket.status = ticket.status === 'open' ? 'resolved' : 'open';
+      ticket.updatedAt = Date.now();
+
+      if (fbDb) {
+        fbDb.ref(`support_tickets/${ticketId}`).update({ status: ticket.status, updatedAt: ticket.updatedAt });
+      }
+
+      localStorage.setItem(KEYS.SUPPORT, JSON.stringify(supportTickets));
+      broadcastChange('SUPPORT_UPDATED', ticket);
+
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+
+      showToast(`تم تغيير حالة التذكرة إلى: ${ticket.status === 'open' ? 'قيد المتابعة' : 'مكتملة'}`, 'info');
+      renderSupportSection();
+      renderStats();
+    }
+
+    // Render Users Table
+    function renderUsersTable() {
+      const { allUsers } = getStoredData();
+      const query = (document.getElementById('user-search-input')?.value || '').toLowerCase().trim();
+      const tbody = document.getElementById('users-table-body');
+      if (!tbody) return;
+
+      const filtered = allUsers.filter(u => 
+        (u.id && u.id.includes(query)) ||
+        (u.username && u.username.toLowerCase().includes(query)) ||
+        (u.phone && u.phone.includes(query))
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-500">لا يوجد لاعبين مطابقين للبحث</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(u => `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="p-3.5 font-mono text-amber-400 font-bold">${u.id}</td>
+          <td class="p-3.5 font-bold text-white">${u.username}</td>
+          <td class="p-3.5 font-mono text-slate-300">${u.phone}</td>
+          <td class="p-3.5 font-mono text-emerald-400 font-bold">${Number(u.balance || 0).toFixed(2)} ج.م</td>
+          <td class="p-3.5">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-700 text-slate-300'}">
+              ${u.role === 'admin' ? 'مدير أدمن' : 'لاعب'}
+            </span>
+          </td>
+          <td class="p-3.5 text-center">
+            <button onclick="quickTopupPrompt('${u.id}', '${u.username}')" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer">
+              ⚡ شحن سريع
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function quickTopupPrompt(userId, userName) {
+      const amtStr = prompt(`أدخل المبلغ الذي تريد شحنه للاعب ${userName} (ID: ${userId}):`, "100");
+      if (!amtStr) return;
+      const amt = Number(amtStr);
+      if (isNaN(amt) || amt <= 0) {
+        alert("يرجى إدخال مبلغ صحيح!");
+        return;
+      }
+
+      document.getElementById('topup-user-id').value = userId;
+      document.getElementById('topup-amount').value = amt;
+      switchTab('topup');
+    }
+
+    // Purge Crash Overrides to ensure 100% Fair Internal Engine
+    function purgeCrashOverrides() {
+      localStorage.removeItem(KEYS.FORCED_CRASH);
+      if (fbDb) {
+        fbDb.ref('settings/forcedCrashMultiplier').remove();
+      }
+      broadcastChange('FORCED_CRASH_UPDATED', null);
+      showToast('تم تأكيد المحرك الداخلي ومسح أي قيم معلقة بنجاح ✅', 'success');
+    }
+
+    // Load initial values to forms
+    function loadFormValues() {
+      const { adminSettings } = getStoredData();
+      if (document.getElementById('num-vodafone')) document.getElementById('num-vodafone').value = adminSettings.vodafoneNumber || '';
+      if (document.getElementById('num-etisalat')) document.getElementById('num-etisalat').value = adminSettings.etisalatNumber || '';
+      if (document.getElementById('num-orange')) document.getElementById('num-orange').value = adminSettings.orangeNumber || '';
+      if (document.getElementById('num-instapay')) document.getElementById('num-instapay').value = adminSettings.instapayNumber || '';
+      if (document.getElementById('num-min-deposit')) document.getElementById('num-min-deposit').value = adminSettings.minDeposit || 10;
+      if (document.getElementById('num-min-withdraw')) document.getElementById('num-min-withdraw').value = adminSettings.minWithdraw || 50;
+
+      const forced = localStorage.getItem(KEYS.FORCED_CRASH);
+      if (forced && document.getElementById('forced-crash-multiplier')) {
+        document.getElementById('forced-crash-multiplier').value = forced;
+      }
+    }
+
+    function renderAll() {
+      renderStats();
+      renderDepositsTable();
+      renderWithdrawsTable();
+      renderTransactionsTable();
+      renderUsersTable();
+      renderSupportSection();
+    }
+
+    // Render Withdrawals Table
+    function renderWithdrawsTable() {
+      const { txs } = getStoredData();
+      const pendingWithdraws = txs.filter(t => t.type === 'withdraw' && t.status === 'pending');
+      const badge = document.getElementById('badge-pending-withdraws');
+      if (badge) badge.innerText = pendingWithdraws.length;
+
+      const tbody = document.getElementById('withdraws-table-body');
+      if (!tbody) return;
+
+      if (pendingWithdraws.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">لا توجد طلبات سحب معلقة حالياً</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pendingWithdraws.map(t => `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="p-3.5 font-mono text-purple-400 font-bold">${t.id}</td>
+          <td class="p-3.5">
+            <div class="font-bold text-white">${t.userName || 'غير معروف'}</div>
+            <div class="text-[11px] text-slate-400 font-mono">ID: ${t.userId || '-'}</div>
+          </td>
+          <td class="p-3.5 font-mono text-amber-300 font-bold">${t.phone || t.senderPhone || t.userPhone || '-'}</td>
+          <td class="p-3.5 font-mono text-rose-400 font-black text-sm">${Number(t.amount || 0).toFixed(2)} ج.م</td>
+          <td class="p-3.5 text-slate-400 text-[11px]">${new Date(t.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</td>
+          <td class="p-3.5 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <button onclick="approveWithdraw('${t.id}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer shadow-sm">
+                ✅ تأكيد التحويل
+              </button>
+              <button onclick="rejectWithdraw('${t.id}')" class="px-3 py-1.5 rounded-lg bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs transition cursor-pointer shadow-sm">
+                ❌ رفض وإرجاع الرصيد
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Approve Withdrawal
+    function approveWithdraw(txId) {
+      const { txs, allUsers } = getStoredData();
+      const txIndex = txs.findIndex(t => t.id === txId);
+      if (txIndex === -1) return;
+
+      const tx = txs[txIndex];
+      tx.status = 'completed';
+
+      const userIndex = allUsers.findIndex(u => u.id === tx.userId);
+      if (userIndex !== -1) {
+        allUsers[userIndex].totalWithdrawn = (Number(allUsers[userIndex].totalWithdrawn) || 0) + Number(tx.amount);
+        if (fbDb) {
+          fbDb.ref(`users/${allUsers[userIndex].id}`).update({
+            totalWithdrawn: allUsers[userIndex].totalWithdrawn
+          });
+        }
+      }
+
+      if (fbDb) {
+        fbDb.ref(`transactions/${txId}`).update({ status: 'completed' });
+      }
+
+      localStorage.setItem(KEYS.ALL_USERS, JSON.stringify(allUsers));
+      localStorage.setItem(KEYS.TXS, JSON.stringify(txs));
+
+      broadcastChange('WITHDRAW_APPROVED', {
+        txId,
+        userId: tx.userId
+      });
+
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+
+      showToast(`تم تأكيد تحويل سحب ${tx.amount} ج.م للاعب بنجاح ✅`, 'success');
+      renderAll();
+    }
+
+    // Reject Withdrawal (Refund balance back to user)
+    function rejectWithdraw(txId) {
+      const { txs, allUsers } = getStoredData();
+      const txIndex = txs.findIndex(t => t.id === txId);
+      if (txIndex === -1) return;
+
+      const tx = txs[txIndex];
+      tx.status = 'rejected';
+
+      let refundedBal = 0;
+      const userIndex = allUsers.findIndex(u => u.id === tx.userId);
+      if (userIndex !== -1) {
+        allUsers[userIndex].balance = Number(((Number(allUsers[userIndex].balance) || 0) + Number(tx.amount)).toFixed(2));
+        refundedBal = allUsers[userIndex].balance;
+
+        if (fbDb) {
+          fbDb.ref(`users/${allUsers[userIndex].id}`).update({
+            balance: allUsers[userIndex].balance
+          });
+        }
+
+        try {
+          const currentActive = JSON.parse(localStorage.getItem(KEYS.USER) || '{}');
+          if (currentActive.id === allUsers[userIndex].id) {
+            currentActive.balance = allUsers[userIndex].balance;
+            localStorage.setItem(KEYS.USER, JSON.stringify(currentActive));
+          }
+        } catch {}
+      }
+
+      if (fbDb) {
+        fbDb.ref(`transactions/${txId}`).update({ status: 'rejected' });
+      }
+
+      localStorage.setItem(KEYS.ALL_USERS, JSON.stringify(allUsers));
+      localStorage.setItem(KEYS.TXS, JSON.stringify(txs));
+
+      broadcastChange('WITHDRAW_REJECTED', {
+        txId,
+        userId: tx.userId,
+        newBalance: refundedBal
+      });
+
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+
+      showToast(`تم رفض طلب السحب وإعادة مبلغ ${tx.amount} ج.م إلى رصيد اللاعب ✅`, 'info');
+      renderAll();
+    }
+
+    // Render Full Transactions Table
+    function renderTransactionsTable() {
+      const { txs } = getStoredData();
+      const tbody = document.getElementById('transactions-table-body');
+      if (!tbody) return;
+
+      if (txs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">لا توجد عمليات مسجلة حتى الآن</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = txs.slice(0, 50).map(t => {
+        let typeBadge = '';
+        if (t.type === 'deposit') {
+          typeBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300">إيداع</span>';
+        } else if (t.type === 'withdraw') {
+          typeBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300">سحب</span>';
+        } else if (t.type === 'win') {
+          typeBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300">فوز</span>';
+        } else {
+          typeBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-700 text-slate-300">رهان/عملية</span>';
+        }
+
+        let statusBadge = '';
+        if (t.status === 'completed') {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400">مكتمل ✅</span>';
+        } else if (t.status === 'pending') {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300">قيد الانتظار ⏳</span>';
+        } else {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400">مرفوض ❌</span>';
+        }
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="p-3.5 font-mono text-slate-300 font-bold">${t.id}</td>
+            <td class="p-3.5">
+              <div class="font-bold text-white">${t.userName || 'مستخدم'}</div>
+              <div class="text-[11px] text-slate-400 font-mono">ID: ${t.userId || '-'}</div>
+            </td>
+            <td class="p-3.5">${typeBadge}</td>
+            <td class="p-3.5 font-mono font-bold ${t.type === 'deposit' || t.type === 'win' ? 'text-emerald-400' : 'text-rose-400'}">
+              ${t.type === 'deposit' || t.type === 'win' ? '+' : '-'}${Number(t.amount || 0).toFixed(2)} ج.م
+            </td>
+            <td class="p-3.5">${statusBadge}</td>
+            <td class="p-3.5 text-slate-400 text-[11px]">${new Date(t.timestamp).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    let prevPendingCount = -1;
+
+    function playDepositChime() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+        osc.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.15); // A5
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      } catch {}
+    }
+
+    function syncAllData(showToastMsg = true) {
+      if (fbDb) {
+        fbDb.ref('transactions').once('value').then(snap => {
+          if (snap.exists()) {
+            const val = snap.val();
+            const list = Object.keys(val).map(k => ({ ...val[k], id: val[k].id || k }));
+            list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            localStorage.setItem(KEYS.TXS, JSON.stringify(list));
+          }
+          renderAll();
+        }).catch(e => console.warn('Sync txs error:', e));
+
+        fbDb.ref('users').once('value').then(snap => {
+          if (snap.exists()) {
+            const val = snap.val();
+            const list = Object.keys(val).map(k => ({ ...val[k], id: val[k].id || k }));
+            localStorage.setItem(KEYS.ALL_USERS, JSON.stringify(list));
+          }
+          renderAll();
+        }).catch(e => console.warn('Sync users error:', e));
+
+        fbDb.ref('settings').once('value').then(snap => {
+          if (snap.exists()) {
+            localStorage.setItem(KEYS.ADMIN_SETTINGS, JSON.stringify(snap.val()));
+            loadFormValues();
+          }
+        }).catch(e => console.warn('Sync settings error:', e));
+      }
+      renderAll();
+      loadFormValues();
+      if (showToastMsg) {
+        showToast('تمت مزامنة جميع الطلبات والأرصدة من السيرفر بنجاح ✅', 'info');
+      }
+    }
+
+    // Auto listen to Firebase RTDB in real time!
+    if (fbDb) {
+      // 1. Transactions Listener
+      fbDb.ref('transactions').on('value', (snap) => {
+        if (snap.exists()) {
+          const val = snap.val();
+          const list = Object.keys(val).map(k => ({ ...val[k], id: val[k].id || k }));
+          list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+          localStorage.setItem(KEYS.TXS, JSON.stringify(list));
+          
+          const currentPending = list.filter(t => t.type === 'deposit' && t.status === 'pending').length;
+          if (prevPendingCount !== -1 && currentPending > prevPendingCount) {
+            playDepositChime();
+            showToast(`🔔 وصول طلب إيداع جديد بقيمة شحن معلقة!`, 'success');
+          }
+          prevPendingCount = currentPending;
+
+          renderAll();
+        } else {
+          localStorage.setItem(KEYS.TXS, JSON.stringify([]));
+          renderAll();
+        }
+      }, (err) => {
+        console.warn('Firebase RTDB transactions listener notice:', err);
+      });
+
+      // 2. Users Listener
+      fbDb.ref('users').on('value', (snap) => {
+        if (snap.exists()) {
+          const val = snap.val();
+          const list = Object.keys(val).map(k => ({ ...val[k], id: val[k].id || k }));
+          localStorage.setItem(KEYS.ALL_USERS, JSON.stringify(list));
+          renderAll();
+        }
+      });
+
+      // 3. Support Tickets Listener
+      fbDb.ref('support_tickets').on('value', (snap) => {
+        if (snap.exists()) {
+          const val = snap.val();
+          const list = Object.keys(val).map(k => ({ ...val[k], id: val[k].id || k }));
+          list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+          localStorage.setItem(KEYS.SUPPORT, JSON.stringify(list));
+          renderAll();
+        }
+      });
+
+      // 4. Settings Listener
+      fbDb.ref('settings').on('value', (snap) => {
+        if (snap.exists()) {
+          const val = snap.val();
+          localStorage.setItem(KEYS.ADMIN_SETTINGS, JSON.stringify(val));
+          loadFormValues();
+        }
+      });
+    }
+
+    // Auto listen to localStorage changes across browser tabs
+    window.addEventListener('storage', () => {
+      renderAll();
+    });
+
+    // Init on DOM load
+    window.addEventListener('DOMContentLoaded', () => {
+      syncAllData(false);
+    });
+  </script>
+
+  <!-- RECEIPT FULLSCREEN IMAGE MODAL -->
+  <div id="receipt-image-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-4" onclick="closeReceiptModal()">
+    <div class="relative max-w-2xl w-full max-h-[90vh] bg-[#131b2e] rounded-2xl border border-slate-700 overflow-hidden shadow-2xl flex flex-col" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between p-3.5 bg-slate-800 border-b border-slate-700">
+        <div class="flex items-center gap-2">
+          <span class="text-base">📸</span>
+          <span class="font-bold text-white text-sm">معاينة وفحص إيصال التحويل وسكرين شوت اللاعب</span>
+        </div>
+        <button onclick="closeReceiptModal()" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition font-bold text-sm">
+          ✕ إغلاق
+        </button>
+      </div>
+      <div class="p-4 overflow-auto flex items-center justify-center bg-black/50">
+        <img id="receipt-modal-img" src="" alt="Receipt Full Preview" class="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl border border-slate-800">
+      </div>
+    </div>
+  </div>
+</body>
+</html>

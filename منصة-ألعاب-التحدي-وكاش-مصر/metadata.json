@@ -1,0 +1,6 @@
+{
+  "name": "WINNERBET",
+  "description": "منصة WINNERBET الرسمية لألعاب الكازينو ولعبة الطيارة (Crash Game) مع كاشف الانفجار، وإيداع فوري عبر إنستا باي ومحافظ كاش مصر.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
